@@ -1,0 +1,102 @@
+---
+title: "BANES Cycling & Walking potential"
+format: gfm
+  # docx:
+  #   toc: true
+  #   number-sections: true
+  #   highlight-style: github
+editor: source
+---
+
+```{r setup, include=FALSE}
+
+library(leaflet)
+library(RColorBrewer)
+library(sf)
+
+load("out/output_data.RData")
+
+```
+
+
+# Introduction
+The purpose of this analysis is to estimate the propensity to cycle for school children in the BANES area. The postcode and school size of all the schools have been obtained from the file "spc_ees_school_characteristics.csv" which is part of the education statistics portal: https://explore-education-statistics.service.gov.uk/find-statistics/school-pupils-and-their-characteristics/2021-22 shown below:
+
+
+```{r schools, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, cache=FALSE, results=FALSE, error=FALSE}
+
+
+lat <- 52.382254
+lon <- 4.901207
+
+BANES <- st_transform(BANES, 4326)
+BANES_schools <- st_transform(BANES_schools, 4326)
+
+pal_L = colorNumeric("YIOrRd", domain = BANES_schools$school_size)
+
+m <- leaflet() %>% 
+  addProviderTiles("CartoDB.Positron", group = "CartoDB")
+
+m <- m %>% addPolygons(data = BANES, color = "black", weight = 1, fillColor = "grey",
+                       opacity = 0.8, fillOpacity = 0.2,
+                       popup = paste("LA name:", BANES$LAD23NM , "<br>"),
+                       group = "Local Authority")
+
+m <- m %>% addCircleMarkers(data = BANES_schools, color = "black", radius = 4, weight = 0.2,
+                            opacity = 1.0, fillOpacity = 0.6, fillColor = ~pal_L(school_size),
+                            popup = paste("School name:", BANES_schools$school_name, "<br>",
+                                          "School size:", BANES_schools$school_size, "<br>",
+                                          "POstcode:", BANES_schools$postcode, "<br>"),
+                            group = "Schools")
+
+# m <- m %>% addLegend("bottomright", pal = pal_L, values = ~school_size,
+#             title = "Value", opacity = 1)
+
+m <- m %>% addLayersControl(overlayGroups = c("Local Authority", "Schools"),
+                            options = layersControlOptions(collapsed = FALSE), position = "topright")
+
+m
+
+```
+
+
+The home postcode of the pupils has been estimated by assuming 80% of pupils live within a 3km catchment of the school and randomly assigning them to a postcode using the R dplyr function slice_sample and weighting function 1/distance+population. Where distance is the distance from the school to each postcode within the catchment and population is the population of each postcode. This assumes that children are more likely to live closer to the school and also more likely to live in a postcode with more people.
+
+Once the postcodes were estimated the routes from each postcode centroid to the school postcode centroid were estimated using the osrm R package which uses the Open Street Map (osm) routing engine to route. It is possible to specify "car", "bike" or "foot". For this analysis "bike" was selected. For the schools in BANES, estimating the journeys of 80% of the pupils from each school resulted in 17550 routes.
+
+The purpose of this analysis is to estimate which roads would see the most cyclist journeys. To do this all the routes were input to the stplanr R package 'overline' function which matches segments and sums up the journeys for each one. The result is a map showing the osm road segments by number of pupils estimated to travel this way each day, shown below.
+
+
+```{r routes, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, cache=FALSE, results=FALSE, error=FALSE}
+
+
+lat <- 52.382254
+lon <- 4.901207
+
+BANES <- st_transform(BANES, 4326)
+BANES_schools <- st_transform(BANES_schools, 4326)
+
+pal_pupils = colorNumeric("YIOrRd", domain = r$pupils)
+
+m <- leaflet() %>% 
+  addProviderTiles("CartoDB.Positron", group = "CartoDB")
+
+m <- m %>% addPolylines(data = r, color = "black", weight = 2,
+                       opacity = 1,
+                       popup = paste("Pupils using:", r$pupils, "<br>"),
+                       group = "cycling routes")
+
+m <- m %>% addCircleMarkers(data = BANES_schools, color = "black", radius = 4,
+                            opacity = 1.0, fillOpacity = 0.2, fillColor = ~pal_L(BANES_schools$school_size),
+                            popup = paste("School name:", BANES_schools$school_name, "<br>",
+                                          "School size:", BANES_schools$school_size, "<br>",
+                                          "POstcode:", BANES_schools$postcode, "<br>"),
+                            group = "Schools")
+
+m <- m %>% addLayersControl(overlayGroups = c("cycling routes", "Schools"),
+                            options = layersControlOptions(collapsed = FALSE), position = "topright")
+
+m
+
+```
+
