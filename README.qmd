@@ -21,6 +21,8 @@ load("out/output_data.RData")
 # Introduction
 The purpose of this analysis is to estimate the propensity to cycle for school children in the BANES area. The postcode and school size of all the schools have been obtained from the file "spc_ees_school_characteristics.csv" which is part of the education statistics portal: https://explore-education-statistics.service.gov.uk/find-statistics/school-pupils-and-their-characteristics/2021-22 shown below:
 
+changed
+
 ```{r schools, eval=TRUE, echo=FALSE, warning=FALSE, message=FALSE, comment=FALSE, cache=FALSE, results=FALSE, error=FALSE}
 
 
